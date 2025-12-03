@@ -6,7 +6,7 @@
     <title>TCM Integrated Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Urbanist', sans-serif; background-color: #F1F5F9; }
         
@@ -42,21 +42,20 @@
             animation: pulse-ring 1.5s infinite;
         }
 
-        /* Custom Range Slider (Dark Theme Optimized) */
+        /* Custom Range Slider (Light Theme Optimized) */
         input[type=range] {
             -webkit-appearance: none; background: transparent; height: 20px; cursor: pointer; width: 100%;
         }
         input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; background: #334155; border-radius: 4px; /* Darker track for dark bg */
+            width: 100%; height: 6px; background: #E2E8F0; border-radius: 4px;
         }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
-            background: #38BDF8; margin-top: -6px; border: 2px solid #0F172A; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            background: #38BDF8; margin-top: -6px; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: transform 0.1s;
         }
         input[type=range]::-webkit-slider-thumb:hover {
             transform: scale(1.2);
-            background: #ffffff;
         }
         
         /* Tooltip Arrow */
@@ -68,6 +67,19 @@
             border-width: 5px;
             border-style: solid;
             border-color: #1e293b transparent transparent transparent;
+        }
+
+        /* Modal Transitions */
+        .modal {
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .modal-active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-hidden {
+            opacity: 0;
+            visibility: hidden;
         }
     </style>
     <script>
@@ -84,52 +96,100 @@
 </head>
 <body class="min-h-screen flex flex-col text-slate-800">
 
-    <!-- HEADER / CONFIG (DARK THEME) -->
-    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-2xl">
+    <!-- ROI MODAL OVERLAY -->
+    <div id="roi-modal" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center modal modal-hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative overflow-hidden">
+            <!-- Decorative Header -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cipher-blue to-cipher-green"></div>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-cipher-blue text-2xl shadow-sm">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-800">Simulation Complete</h3>
+                <p class="text-slate-500 text-sm mt-1">Enter your annual investment to calculate ROI.</p>
+            </div>
+
+            <!-- Annual Benefit Display (From Sim) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-center">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Projected Annual Benefit</p>
+                <div class="text-3xl font-extrabold text-cipher-green" id="modal-annual-benefit">$0</div>
+            </div>
+
+            <!-- Investment Input -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-slate-700 mb-2">Annual Software Investment</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-slate-400 font-bold">$</span>
+                    </div>
+                    <input type="number" id="investment-input" value="25000" class="w-full pl-8 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cipher-blue font-mono font-bold text-slate-700" placeholder="25000">
+                </div>
+            </div>
+
+            <button onclick="calculateFinalROI()" class="w-full bg-cipher-blue hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02]">
+                Reveal ROI
+            </button>
+
+            <!-- RESULT VIEW (Hidden initially) -->
+            <div id="roi-result" class="hidden mt-6 pt-6 border-t border-slate-100 text-center animate-pulse">
+                <p class="text-sm font-bold text-slate-500 uppercase">Return on Investment</p>
+                <div class="text-5xl font-black text-cipher-blue my-2" id="final-roi-display">0.0x</div>
+                <div class="text-xs text-slate-400" id="final-roi-context">For every $1 spent, you get $X back.</div>
+                
+                <button onclick="closeModal()" class="mt-6 text-sm text-slate-400 hover:text-slate-600 font-bold underline">
+                    Close & Review Simulation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER / CONFIG (LIGHT THEME) -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-7xl mx-auto px-6 py-5">
             <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
                 
                 <!-- Brand Identity -->
                 <div class="flex items-center gap-4 w-full xl:w-auto min-w-[200px]">
-                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-cipher-blue rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-blue-900/50">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-cipher-blue rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-lg shadow-blue-100">
                         <i class="fa-solid fa-calculator"></i>
                     </div>
                     <div>
-                        <h1 class="font-bold text-2xl text-white tracking-tight">TCM Simulator</h1>
-                        <p class="text-xs text-slate-400 font-medium tracking-wide uppercase">Workflow ROI Engine</p>
+                        <h1 class="font-extrabold text-3xl text-slate-900 tracking-tight leading-none">TCM Simulator</h1>
+                        <p class="text-sm text-cipher-blue font-bold tracking-wider uppercase mt-1">Workflow ROI Engine</p>
                     </div>
                 </div>
 
                 <!-- CONTROL CENTER -->
-                <div class="flex-grow w-full xl:w-auto bg-slate-800/50 rounded-xl border border-slate-700 p-5 shadow-inner backdrop-blur-sm">
+                <div class="flex-grow w-full xl:w-auto bg-slate-50/80 rounded-xl border border-slate-200 p-5 shadow-sm">
                     
                     <!-- Row 1: General & Manual Settings -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-4">
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Discharges
-                                <span class="text-white bg-slate-700 px-1.5 py-0.5 rounded" id="disp_vol">300</span>
+                                <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_vol">300</span>
                             </label>
                             <input type="range" id="input_vol" min="50" max="1000" step="50" value="300" oninput="updateConfig()">
                         </div>
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Reimbursement
-                                <span class="text-green-400 bg-slate-700 px-1.5 py-0.5 rounded" id="disp_rev">$200</span>
+                                <span class="text-green-600 bg-white border border-green-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_rev">$200</span>
                             </label>
                             <input type="range" id="input_rev" min="150" max="250" step="5" value="200" oninput="updateConfig()">
                         </div>
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Nurse Wage/Hr
-                                <span class="text-orange-300 bg-slate-700 px-1.5 py-0.5 rounded" id="disp_wage">$45</span>
+                                <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_wage">$45</span>
                             </label>
                             <input type="range" id="input_wage" min="30" max="100" step="1" value="45" oninput="updateConfig()">
                         </div>
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Manual Mins/Pt
-                                <span class="text-red-300 bg-slate-700 px-1.5 py-0.5 rounded" id="disp_mins">20</span>
+                                <span class="text-red-500 bg-white border border-red-100 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_mins">20</span>
                             </label>
                             <input type="range" id="input_mins" min="5" max="45" step="1" value="20" oninput="updateConfig()">
                         </div>
@@ -138,34 +198,34 @@
                     <!-- Row 2: Outreach & Alert Settings -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-end">
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Reach Rate: Manual
-                                <span class="text-slate-200" id="disp_reach_manual">35%</span>
+                                <span class="text-red-500" id="disp_reach_manual">35%</span>
                             </label>
                             <input type="range" id="input_reach_manual" min="10" max="90" step="5" value="35" oninput="updateConfig()">
                         </div>
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Reach Rate: Auto
-                                <span class="text-blue-400" id="disp_reach_cipher">75%</span>
+                                <span class="text-cipher-green" id="disp_reach_cipher">75%</span>
                             </label>
                             <input type="range" id="input_reach_cipher" min="50" max="100" step="5" value="75" oninput="updateConfig()">
                         </div>
                         
                         <!-- Alert Rate -->
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Alert Rate (Auto)
-                                <span class="text-orange-400" id="disp_alert_rate">20%</span>
+                                <span class="text-orange-500" id="disp_alert_rate">20%</span>
                             </label>
                             <input type="range" id="input_alert_rate" min="5" max="50" step="5" value="20" oninput="updateConfig()">
                         </div>
                         
                         <!-- Mins Per Alert -->
                         <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
                                 Mins/Alert (Auto)
-                                <span class="text-orange-400" id="disp_alert_mins">5m</span>
+                                <span class="text-orange-500" id="disp_alert_mins">5m</span>
                             </label>
                             <input type="range" id="input_alert_mins" min="1" max="30" step="1" value="5" oninput="updateConfig()">
                         </div>
@@ -174,10 +234,10 @@
 
                 <!-- Action Buttons -->
                 <div class="w-full xl:w-48 flex flex-col gap-3">
-                    <button onclick="startSimulation()" id="startBtn" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white p-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/20 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+                    <button onclick="startSimulation()" id="startBtn" class="w-full bg-cipher-green hover:bg-emerald-600 text-white p-3 rounded-xl font-bold text-sm shadow-md shadow-emerald-100 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-play"></i> Run Sim
                     </button>
-                    <button onclick="resetSimulation()" id="resetBtn" class="hidden w-full bg-slate-700 hover:bg-slate-600 text-slate-200 p-3 rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-600">
+                    <button onclick="resetSimulation()" id="resetBtn" class="hidden w-full bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
                         <i class="fa-solid fa-rotate-right"></i> Reset
                     </button>
                     <div class="text-[10px] text-slate-500 text-center px-2">
@@ -208,7 +268,7 @@
                     </div>
                 </div>
 
-                <!-- Center: NET GAIN -->
+                <!-- Center: NET GAIN & ROI -->
                 <div class="flex flex-col md:flex-row gap-6 w-full lg:w-auto items-center justify-center">
                     <!-- Monthly -->
                     <div class="flex flex-col items-center justify-center bg-green-50 px-8 py-3 rounded-2xl border border-green-100 shadow-sm relative group cursor-help z-10">
@@ -236,6 +296,15 @@
                             Projected 12-month value of implementing automation.
                             <div class="tooltip-arrow"></div>
                         </div>
+                    </div>
+
+                    <!-- NEW: HIDDEN ROI CARD (Revealed after modal) -->
+                    <!-- Added onclick="openModal()" and cursor-pointer for interaction -->
+                    <div id="scoreboard-roi-card" onclick="openModal()" class="hidden flex-col items-center justify-center bg-white border-2 border-cipher-blue px-8 py-3 rounded-2xl shadow-lg transform scale-105 relative group z-10 cursor-pointer hover:bg-blue-50 transition-colors">
+                        <p class="text-xs font-bold text-cipher-blue uppercase tracking-widest mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-rocket"></i> Final ROI
+                        </p>
+                        <div class="text-4xl font-extrabold text-cipher-blue tracking-tight" id="scoreboard-roi-value">0.0x</div>
                     </div>
                 </div>
 
@@ -312,30 +381,19 @@
                     </div>
                 </div>
 
-                <div class="bg-slate-50 border-t border-slate-200 p-4 grid grid-cols-2 gap-4">
-                    <div>
-                        <span class="text-xs text-slate-500 uppercase font-bold flex items-center gap-1">
+                <!-- Removed Labor Cost from grid, centered Elapsed Time -->
+                <div class="bg-slate-50 border-t border-slate-200 p-4 flex justify-center">
+                    <div class="text-center">
+                        <span class="text-xs text-slate-500 uppercase font-bold flex items-center justify-center gap-1">
                             Elapsed Time
                             <div class="relative group inline-block">
                                 <i class="fa-regular fa-circle-question text-slate-400 hover:text-blue-500 cursor-help"></i>
-                                <div class="absolute bottom-full left-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                                <div class="absolute bottom-full left-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
                                     Time needed to call everyone. Exceeding 48 hours (2 days) often makes claims unbillable.
                                 </div>
                             </div>
                         </span>
                         <div id="manual-timer" class="text-xl font-mono font-bold text-slate-700">Day 0 - 0:00</div>
-                    </div>
-                    <div>
-                        <span class="text-xs text-slate-500 uppercase font-bold flex items-center gap-1">
-                            Labor Cost
-                            <div class="relative group inline-block">
-                                <i class="fa-regular fa-circle-question text-slate-400 hover:text-blue-500 cursor-help"></i>
-                                <div class="absolute bottom-full right-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
-                                    High cost because the nurse is actively working for every single patient interaction.
-                                </div>
-                            </div>
-                        </span>
-                        <div id="manual-labor-cost" class="text-xl font-mono font-bold text-red-500">$0</div>
                     </div>
                 </div>
             </div>
@@ -412,30 +470,19 @@
                     </div>
                 </div>
 
-                <div class="bg-blue-50 border-t border-blue-100 p-4 grid grid-cols-2 gap-4">
-                    <div>
-                        <span class="text-xs text-blue-500 uppercase font-bold flex items-center gap-1">
+                <!-- Removed Labor Cost from grid, centered Elapsed Time -->
+                <div class="bg-blue-50 border-t border-blue-100 p-4 flex justify-center">
+                    <div class="text-center">
+                        <span class="text-xs text-blue-500 uppercase font-bold flex items-center justify-center gap-1">
                             Elapsed Time
                             <div class="relative group inline-block">
                                 <i class="fa-regular fa-circle-question text-blue-400 hover:text-blue-600 cursor-help"></i>
-                                <div class="absolute bottom-full left-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                                <div class="absolute bottom-full left-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
                                     Near instant. The system can dial/text thousands of patients in minutes.
                                 </div>
                             </div>
                         </span>
                         <div id="cipher-timer" class="text-xl font-mono font-bold text-cipher-blue">Day 0 - 0:00</div>
-                    </div>
-                    <div>
-                        <span class="text-xs text-blue-500 uppercase font-bold flex items-center gap-1">
-                            Labor Cost
-                            <div class="relative group inline-block">
-                                <i class="fa-regular fa-circle-question text-blue-400 hover:text-blue-600 cursor-help"></i>
-                                <div class="absolute bottom-full right-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
-                                    Drastically lower. Labor is only spent on the ~20% of patients who actually need help.
-                                </div>
-                            </div>
-                        </span>
-                        <div id="cipher-labor-cost" class="text-xl font-mono font-bold text-green-600">$0</div>
                     </div>
                 </div>
             </div>
@@ -464,6 +511,8 @@
         // Simulation State
         let isRunning = false;
         let intervals = [];
+        let completedSims = 0; // Track completion of both
+        let roiCalculated = false; // Flag to track if ROI was calculated in modal
         
         // Manual State
         let mCaptured = 0;
@@ -476,6 +525,7 @@
         let cAlerts = 0;
         let cTimeMin = 0;
         let cLaborCost = 0;
+        let annualBenefit = 0; // Store for modal
 
         // --- 2. SETUP ---
         function updateConfig() {
@@ -534,12 +584,16 @@
             document.getElementById('cipher-alerts').innerText = '0';
             document.getElementById('manual-timer').innerText = 'Day 0 - 0:00';
             document.getElementById('cipher-timer').innerText = 'Day 0 - 0:00';
-            document.getElementById('manual-labor-cost').innerText = '$0';
-            document.getElementById('cipher-labor-cost').innerText = '$0';
+            // Removed manual/cipher labor cost display reset
             
             // Reset Scoreboard
             mCaptured = 0; cCaptured = 0; mLaborCost = 0; cLaborCost = 0; mTimeMin = 0; cTimeMin = 0;
             updateScoreboard();
+
+            // Hide ROI card if it was shown
+            document.getElementById('scoreboard-roi-card').classList.add('hidden');
+            document.getElementById('scoreboard-roi-card').classList.remove('flex');
+            roiCalculated = false;
 
             for(let i=0; i<numDots; i++) {
                 const mDot = document.createElement('div');
@@ -558,6 +612,8 @@
         function startSimulation() {
             if(isRunning) return;
             isRunning = true;
+            completedSims = 0;
+            roiCalculated = false;
             
             // UI Toggle
             document.getElementById('startBtn').classList.add('hidden');
@@ -598,12 +654,71 @@
             const revDiff = cCaptured - mCaptured;
             const laborSavings = mLaborCost - cLaborCost;
             const netBenefit = revDiff + laborSavings;
-            const annualBenefit = netBenefit * 12;
+            annualBenefit = netBenefit * 12; // Update global var for modal
             
             document.getElementById('header-manual-rev').innerText = formatMoney(mCaptured);
             document.getElementById('header-cipher-rev').innerText = formatMoney(cCaptured);
             document.getElementById('header-net-gain').innerText = '+' + formatMoney(netBenefit);
             document.getElementById('header-annual-gain').innerText = '+' + formatMoney(annualBenefit);
+        }
+
+        function checkCompletion() {
+            completedSims++;
+            if(completedSims >= 2) {
+                // Both simulations finished
+                setTimeout(() => {
+                    openModal();
+                }, 1000);
+            }
+        }
+
+        // --- ROI MODAL LOGIC ---
+        function openModal() {
+            const modal = document.getElementById('roi-modal');
+            const benefitDisplay = document.getElementById('modal-annual-benefit');
+            
+            benefitDisplay.innerText = '+' + formatMoney(annualBenefit);
+            
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-active');
+            
+            // Hide result part initially
+            document.getElementById('roi-result').classList.add('hidden');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('roi-modal');
+            modal.classList.remove('modal-active');
+            modal.classList.add('modal-hidden');
+
+            // IF ROI WAS CALCULATED, SHOW THE CARD ON SCOREBOARD
+            if(roiCalculated) {
+                const roiCard = document.getElementById('scoreboard-roi-card');
+                roiCard.classList.remove('hidden');
+                roiCard.classList.add('flex');
+            }
+        }
+
+        function calculateFinalROI() {
+            const investment = parseInt(document.getElementById('investment-input').value);
+            const resultDiv = document.getElementById('roi-result');
+            const roiDisplay = document.getElementById('final-roi-display');
+            const roiContext = document.getElementById('final-roi-context');
+            
+            // ROI Formula: Benefit / Cost Ratio
+            let roi = 0;
+            if(investment > 0) {
+                roi = annualBenefit / investment;
+            }
+
+            // Update Modal Display
+            roiDisplay.innerText = roi.toFixed(1) + 'x';
+            roiContext.innerText = `For every $1 spent, you get $${roi.toFixed(2)} in value.`;
+            resultDiv.classList.remove('hidden');
+
+            // Update Persistent Scoreboard Card
+            document.getElementById('scoreboard-roi-value').innerText = roi.toFixed(1) + 'x';
+            roiCalculated = true; // Mark as done
         }
 
         // --- MANUAL LOGIC ---
@@ -617,6 +732,7 @@
                     clearInterval(timer);
                     mNurse.classList.remove('calling', 'border-blue-500', 'text-blue-500');
                     mStatus.innerText = "Done";
+                    checkCompletion();
                     return;
                 }
 
@@ -632,7 +748,7 @@
                 // (Minutes / 60) * Hourly Rate
                 const batchCost = (batchTime / 60) * nurseHourly;
                 mLaborCost += batchCost;
-                document.getElementById('manual-labor-cost').innerText = formatMoney(mLaborCost);
+                // document.getElementById('manual-labor-cost').innerText = formatMoney(mLaborCost);
 
                 const isLate = mTimeMin > 2880; // 48 Hours
                 const reachRate = manualReachRate; 
@@ -689,6 +805,7 @@
                     if(dotIdx >= numDots) {
                         clearInterval(timer);
                         cCloud.classList.remove('broadcasting', 'scale-110');
+                        checkCompletion();
                         return;
                     }
 
@@ -715,7 +832,7 @@
                             // Add labor cost for alert (Variable Time!)
                             const alertCost = (cipherMinsPerAlert / 60) * nurseHourly;
                             cLaborCost += alertCost;
-                            document.getElementById('cipher-labor-cost').innerText = formatMoney(cLaborCost);
+                            // document.getElementById('cipher-labor-cost').innerText = formatMoney(cLaborCost);
 
                             dot.classList.remove('bg-slate-300');
                             dot.classList.add('bg-orange-500', 'text-white');
