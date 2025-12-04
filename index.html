@@ -145,8 +145,8 @@
     </div>
 
     <!-- HEADER / CONFIG (LIGHT THEME) -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-6 py-5">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 py-5" id="header-container">
             <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
                 
                 <!-- Brand Identity -->
@@ -161,79 +161,95 @@
                 </div>
 
                 <!-- CONTROL CENTER -->
-                <div class="flex-grow w-full xl:w-auto bg-slate-50/80 rounded-xl border border-slate-200 p-5 shadow-sm">
+                <div id="config-panel" class="flex-grow w-full xl:w-auto bg-slate-50/80 rounded-xl border border-slate-200 p-5 shadow-sm transition-all duration-300">
                     
-                    <!-- Row 1: General & Manual Settings -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-4">
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Discharges
-                                <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_vol">300</span>
-                            </label>
-                            <input type="range" id="input_vol" min="50" max="1000" step="50" value="300" oninput="updateConfig()">
+                    <!-- INPUTS CONTAINER (Will be hidden) -->
+                    <div id="config-inputs" class="transition-opacity duration-300">
+                        <!-- Row 1: General & Manual Settings -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-4">
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Discharges
+                                    <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_vol">300</span>
+                                </label>
+                                <input type="range" id="input_vol" min="50" max="1000" step="50" value="300" oninput="updateConfig()">
+                            </div>
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Reimbursement
+                                    <span class="text-green-600 bg-white border border-green-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_rev">$200</span>
+                                </label>
+                                <input type="range" id="input_rev" min="150" max="250" step="5" value="200" oninput="updateConfig()">
+                            </div>
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Nurse Wage/Hr
+                                    <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_wage">$45</span>
+                                </label>
+                                <input type="range" id="input_wage" min="30" max="100" step="1" value="45" oninput="updateConfig()">
+                            </div>
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Manual Mins/Pt
+                                    <span class="text-red-500 bg-white border border-red-100 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_mins">20</span>
+                                </label>
+                                <input type="range" id="input_mins" min="5" max="45" step="1" value="20" oninput="updateConfig()">
+                            </div>
                         </div>
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Reimbursement
-                                <span class="text-green-600 bg-white border border-green-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_rev">$200</span>
-                            </label>
-                            <input type="range" id="input_rev" min="150" max="250" step="5" value="200" oninput="updateConfig()">
-                        </div>
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Nurse Wage/Hr
-                                <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_wage">$45</span>
-                            </label>
-                            <input type="range" id="input_wage" min="30" max="100" step="1" value="45" oninput="updateConfig()">
-                        </div>
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Manual Mins/Pt
-                                <span class="text-red-500 bg-white border border-red-100 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_mins">20</span>
-                            </label>
-                            <input type="range" id="input_mins" min="5" max="45" step="1" value="20" oninput="updateConfig()">
+                        
+                        <!-- Row 2: Outreach & Alert Settings -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-end">
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Reach Rate: Manual
+                                    <span class="text-red-500" id="disp_reach_manual">35%</span>
+                                </label>
+                                <input type="range" id="input_reach_manual" min="10" max="90" step="5" value="35" oninput="updateConfig()">
+                            </div>
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Reach Rate: Auto
+                                    <span class="text-cipher-green" id="disp_reach_cipher">75%</span>
+                                </label>
+                                <input type="range" id="input_reach_cipher" min="50" max="100" step="5" value="75" oninput="updateConfig()">
+                            </div>
+                            
+                            <!-- Alert Rate -->
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Alert Rate (Auto)
+                                    <span class="text-orange-500" id="disp_alert_rate">20%</span>
+                                </label>
+                                <input type="range" id="input_alert_rate" min="5" max="50" step="5" value="20" oninput="updateConfig()">
+                            </div>
+                            
+                            <!-- Mins Per Alert -->
+                            <div class="group">
+                                <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
+                                    Mins/Alert (Auto)
+                                    <span class="text-orange-500" id="disp_alert_mins">5m</span>
+                                </label>
+                                <input type="range" id="input_alert_mins" min="1" max="30" step="1" value="5" oninput="updateConfig()">
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Row 2: Outreach & Alert Settings -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-end">
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Reach Rate: Manual
-                                <span class="text-red-500" id="disp_reach_manual">35%</span>
-                            </label>
-                            <input type="range" id="input_reach_manual" min="10" max="90" step="5" value="35" oninput="updateConfig()">
+
+                    <!-- MINIMIZED STATUS BAR (Hidden by default) -->
+                    <div id="sim-status-bar" class="hidden items-center justify-between w-full h-10 animate-fade-in">
+                        <div class="flex items-center gap-6 text-sm font-bold text-slate-600">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-users text-cipher-blue"></i> <span id="mini-vol">300</span> Patients</span>
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-user-nurse text-cipher-blue"></i> <span id="mini-wage">$45</span>/hr</span>
+                            <span class="flex items-center gap-2 text-slate-400 font-normal">|</span>
+                            <span class="flex items-center gap-2"><span class="text-xs text-slate-400 uppercase tracking-wide">Simulating...</span> <i class="fa-solid fa-circle-notch fa-spin text-cipher-green"></i></span>
                         </div>
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Reach Rate: Auto
-                                <span class="text-cipher-green" id="disp_reach_cipher">75%</span>
-                            </label>
-                            <input type="range" id="input_reach_cipher" min="50" max="100" step="5" value="75" oninput="updateConfig()">
-                        </div>
-                        
-                        <!-- Alert Rate -->
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Alert Rate (Auto)
-                                <span class="text-orange-500" id="disp_alert_rate">20%</span>
-                            </label>
-                            <input type="range" id="input_alert_rate" min="5" max="50" step="5" value="20" oninput="updateConfig()">
-                        </div>
-                        
-                        <!-- Mins Per Alert -->
-                        <div class="group">
-                            <label class="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-wider">
-                                Mins/Alert (Auto)
-                                <span class="text-orange-500" id="disp_alert_mins">5m</span>
-                            </label>
-                            <input type="range" id="input_alert_mins" min="1" max="30" step="1" value="5" oninput="updateConfig()">
-                        </div>
+                        <button onclick="resetSimulation()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-bold transition-colors">
+                            Stop & Reset
+                        </button>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="w-full xl:w-48 flex flex-col gap-3">
+                <!-- Action Buttons (Original) -->
+                <div id="action-buttons" class="w-full xl:w-48 flex flex-col gap-3 transition-opacity duration-300">
                     <button onclick="startSimulation()" id="startBtn" class="w-full bg-cipher-green hover:bg-emerald-600 text-white p-3 rounded-xl font-bold text-sm shadow-md shadow-emerald-100 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-play"></i> Run Sim
                     </button>
@@ -299,7 +315,6 @@
                     </div>
 
                     <!-- NEW: HIDDEN ROI CARD (Revealed after modal) -->
-                    <!-- Added onclick="openModal()" and cursor-pointer for interaction -->
                     <div id="scoreboard-roi-card" onclick="openModal()" class="hidden flex-col items-center justify-center bg-white border-2 border-cipher-blue px-8 py-3 rounded-2xl shadow-lg transform scale-105 relative group z-10 cursor-pointer hover:bg-blue-50 transition-colors">
                         <p class="text-xs font-bold text-cipher-blue uppercase tracking-widest mb-1 flex items-center gap-2">
                             <i class="fa-solid fa-rocket"></i> Final ROI
@@ -381,7 +396,6 @@
                     </div>
                 </div>
 
-                <!-- Removed Labor Cost from grid, centered Elapsed Time -->
                 <div class="bg-slate-50 border-t border-slate-200 p-4 flex justify-center">
                     <div class="text-center">
                         <span class="text-xs text-slate-500 uppercase font-bold flex items-center justify-center gap-1">
@@ -567,6 +581,10 @@
             // NEW LABELS
             document.getElementById('disp_alert_rate').innerText = alertRateInput + '%';
             document.getElementById('disp_alert_mins').innerText = alertMinsInput + 'm';
+            
+            // Update Mini Status Bar
+            document.getElementById('mini-vol').innerText = volInput;
+            document.getElementById('mini-wage').innerText = '$' + wageInput;
 
             initVisuals();
         }
@@ -584,7 +602,6 @@
             document.getElementById('cipher-alerts').innerText = '0';
             document.getElementById('manual-timer').innerText = 'Day 0 - 0:00';
             document.getElementById('cipher-timer').innerText = 'Day 0 - 0:00';
-            // Removed manual/cipher labor cost display reset
             
             // Reset Scoreboard
             mCaptured = 0; cCaptured = 0; mLaborCost = 0; cLaborCost = 0; mTimeMin = 0; cTimeMin = 0;
@@ -615,9 +632,18 @@
             completedSims = 0;
             roiCalculated = false;
             
-            // UI Toggle
-            document.getElementById('startBtn').classList.add('hidden');
-            document.getElementById('resetBtn').classList.remove('hidden');
+            // UI Toggle & Minification
+            document.getElementById('action-buttons').classList.add('hidden'); // Hide original buttons
+            document.getElementById('config-inputs').classList.add('hidden'); // Hide sliders
+            document.getElementById('config-inputs').classList.add('opacity-0');
+            document.getElementById('sim-status-bar').classList.remove('hidden'); // Show status bar
+            document.getElementById('sim-status-bar').classList.add('flex');
+            
+            // Adjust panel styling for compact look
+            const panel = document.getElementById('config-panel');
+            panel.classList.remove('p-5');
+            panel.classList.add('p-2', 'py-3');
+
             disableInputs(true);
 
             // Reset Runtime vars
