@@ -3,900 +3,358 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TCM Integrated Simulator</title>
+    <title>CipherHealth TCM ROI Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Urbanist', sans-serif; background-color: #F1F5F9; }
-        
-        .patient-dot {
-            transition: all 0.5s ease;
-        }
-        
-        /* Animations */
-        @keyframes pulse-ring {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            100% { transform: scale(2); opacity: 0; }
-        }
-        
-        .calling::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 100%; height: 100%;
-            border: 2px solid #3B82F6;
+        body { font-family: 'Inter', sans-serif; }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #2563EB;
+            cursor: pointer;
             border-radius: 50%;
-            transform: translate(-50%, -50%);
-            animation: pulse-ring 1s infinite;
         }
-
-        .broadcasting::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 150%; height: 150%;
-            border: 2px solid #22C55E;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            animation: pulse-ring 1.5s infinite;
-        }
-
-        /* Custom Range Slider (Light Theme Optimized) */
-        input[type=range] {
-            -webkit-appearance: none; background: transparent; height: 24px; cursor: pointer; width: 100%;
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 8px; background: #E2E8F0; border-radius: 4px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
-            background: #38BDF8; margin-top: -6px; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.1s;
-        }
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-        
-        /* Tooltip Arrow */
-        .tooltip-arrow {
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: #1e293b transparent transparent transparent;
-        }
-
-        /* Modal Transitions */
-        .modal {
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-        }
-        .modal-active {
-            opacity: 1;
-            visibility: visible;
-        }
-        .modal-hidden {
-            opacity: 0;
-            visibility: hidden;
-        }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
     </style>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        cipher: { blue: '#1D70B8', green: '#68BC59', navy: '#1C2930' }
-                    }
-                }
-            }
-        }
-    </script>
 </head>
-<body class="min-h-screen flex flex-col text-slate-800">
+<body class="bg-slate-50 text-slate-800">
 
-    <!-- ROI MODAL OVERLAY -->
-    <div id="roi-modal" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center modal modal-hidden backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative overflow-hidden">
-            <!-- Decorative Header -->
-            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cipher-blue to-cipher-green"></div>
-            
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-cipher-blue text-2xl shadow-sm">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
                     <i class="fa-solid fa-calculator"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-slate-800">Simulation Complete</h3>
-                <p class="text-slate-500 text-sm mt-1">Enter your annual investment to calculate ROI.</p>
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">CipherHealth <span class="text-blue-600">ROI Calculator</span></h1>
             </div>
-
-            <!-- Annual Benefit Display (From Sim) -->
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-center">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Projected Annual Benefit</p>
-                <div class="text-3xl font-extrabold text-cipher-green" id="modal-annual-benefit">$0</div>
-            </div>
-
-            <!-- Investment Input -->
-            <div class="mb-6">
-                <label class="block text-sm font-bold text-slate-700 mb-2">Annual Software Investment</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span class="text-slate-400 font-bold">$</span>
-                    </div>
-                    <input type="number" id="investment-input" value="25000" class="w-full pl-8 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cipher-blue font-mono font-bold text-slate-700" placeholder="25000">
-                </div>
-            </div>
-
-            <button onclick="calculateFinalROI()" class="w-full bg-cipher-blue hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02]">
-                Reveal ROI
-            </button>
-
-            <!-- RESULT VIEW (Hidden initially) -->
-            <div id="roi-result" class="hidden mt-6 pt-6 border-t border-slate-100 text-center animate-pulse">
-                <p class="text-sm font-bold text-slate-500 uppercase">Return on Investment</p>
-                <div class="text-5xl font-black text-cipher-blue my-2" id="final-roi-display">0.0x</div>
-                <div class="text-xs text-slate-400" id="final-roi-context">For every $1 spent, you get $X back.</div>
-                
-                <button onclick="closeModal()" class="mt-6 text-sm text-slate-400 hover:text-slate-600 font-bold underline">
-                    Close & Review Simulation
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- HEADER / CONFIG (LIGHT THEME) -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-4 py-3" id="header-container">
-            <div class="flex flex-col xl:flex-row items-center justify-between gap-4">
-                
-                <!-- Brand Identity -->
-                <div class="flex items-center gap-3 w-full xl:w-auto min-w-[180px]">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-cipher-blue rounded-xl flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-blue-100">
-                        <i class="fa-solid fa-calculator"></i>
-                    </div>
-                    <div>
-                        <h1 class="font-extrabold text-xl text-slate-900 tracking-tight leading-none">TCM Simulator</h1>
-                        <p class="text-[10px] text-cipher-blue font-bold tracking-wider uppercase mt-0.5">Workflow ROI Engine</p>
-                    </div>
-                </div>
-
-                <!-- CONTROL CENTER -->
-                <div id="config-panel" class="flex-grow w-full xl:w-auto bg-slate-50/80 rounded-xl border border-slate-200 p-3 shadow-sm transition-all duration-300">
-                    
-                    <!-- INPUTS CONTAINER (Will be hidden) -->
-                    <div id="config-inputs" class="transition-opacity duration-300">
-                        <!-- Row 1: General & Manual Settings -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 mb-2">
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Discharges
-                                    <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_vol">300</span>
-                                </label>
-                                <input type="range" id="input_vol" min="50" max="1000" step="50" value="300" oninput="updateConfig()">
-                            </div>
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Reimbursement
-                                    <span class="text-green-600 bg-white border border-green-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_rev">$200</span>
-                                </label>
-                                <input type="range" id="input_rev" min="150" max="250" step="5" value="200" oninput="updateConfig()">
-                            </div>
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Nurse Wage/Hr
-                                    <span class="text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_wage">$45</span>
-                                </label>
-                                <input type="range" id="input_wage" min="30" max="100" step="1" value="45" oninput="updateConfig()">
-                            </div>
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Manual Mins/Pt
-                                    <span class="text-red-500 bg-white border border-red-100 px-2 py-0.5 rounded-md shadow-sm font-bold" id="disp_mins">20</span>
-                                </label>
-                                <input type="range" id="input_mins" min="5" max="45" step="1" value="20" oninput="updateConfig()">
-                            </div>
-                        </div>
-                        
-                        <!-- Row 2: Outreach & Alert Settings -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 items-end">
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Reach Rate: Manual
-                                    <span class="text-red-500" id="disp_reach_manual">35%</span>
-                                </label>
-                                <input type="range" id="input_reach_manual" min="10" max="90" step="5" value="35" oninput="updateConfig()">
-                            </div>
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Reach Rate: Auto
-                                    <span class="text-cipher-green" id="disp_reach_cipher">75%</span>
-                                </label>
-                                <input type="range" id="input_reach_cipher" min="50" max="100" step="5" value="75" oninput="updateConfig()">
-                            </div>
-                            
-                            <!-- Alert Rate -->
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Alert Rate (Auto)
-                                    <span class="text-orange-500" id="disp_alert_rate">20%</span>
-                                </label>
-                                <input type="range" id="input_alert_rate" min="5" max="50" step="5" value="20" oninput="updateConfig()">
-                            </div>
-                            
-                            <!-- Mins Per Alert -->
-                            <div class="group">
-                                <label class="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1 tracking-wider">
-                                    Mins/Alert (Auto)
-                                    <span class="text-orange-500" id="disp_alert_mins">5m</span>
-                                </label>
-                                <input type="range" id="input_alert_mins" min="1" max="30" step="1" value="5" oninput="updateConfig()">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- MINIMIZED STATUS BAR (Hidden by default) -->
-                    <div id="sim-status-bar" class="hidden items-center justify-between w-full h-10 animate-fade-in">
-                        <div class="flex items-center gap-6 text-sm font-bold text-slate-600">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-users text-cipher-blue"></i> <span id="mini-vol">300</span> Patients</span>
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-user-nurse text-cipher-blue"></i> <span id="mini-wage">$45</span>/hr</span>
-                            <span class="flex items-center gap-2 text-slate-400 font-normal">|</span>
-                            <span class="flex items-center gap-2"><span class="text-xs text-slate-400 uppercase tracking-wide">Simulating...</span> <i class="fa-solid fa-circle-notch fa-spin text-cipher-green"></i></span>
-                        </div>
-                        <button onclick="resetSimulation()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-bold transition-colors">
-                            Stop & Reset
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Action Buttons (Original) -->
-                <div id="action-buttons" class="w-full xl:w-40 flex flex-col gap-2 transition-opacity duration-300">
-                    <button onclick="startSimulation()" id="startBtn" class="w-full bg-cipher-green hover:bg-emerald-600 text-white p-2.5 rounded-xl font-bold text-sm shadow-md shadow-emerald-100 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play"></i> Run Sim
-                    </button>
-                    <button onclick="resetSimulation()" id="resetBtn" class="hidden w-full bg-slate-700 hover:bg-slate-600 text-white p-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-rotate-right"></i> Reset
-                    </button>
-                    <div class="text-[9px] text-slate-400 text-center px-2 leading-tight">
-                        Adjust parameters to test scenarios.
-                    </div>
-                </div>
-
-            </div>
+            <div class="text-sm text-slate-500 hidden sm:block">Transitional Care Management (TCM) Edition</div>
         </div>
     </header>
 
-    <!-- MAIN SIMULATION AREA -->
-    <main class="flex-grow p-4 bg-slate-100 flex flex-col items-center justify-start pt-6">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- ELEGANT SCOREBOARD -->
-        <div class="max-w-7xl w-full mb-6">
-            <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-4 flex flex-col lg:flex-row justify-between items-center relative gap-6 lg:gap-0">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 via-slate-200 to-cipher-green rounded-t-xl"></div>
-                
-                <!-- Left Score -->
-                <div class="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
-                    <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500 border border-red-100 shadow-sm">
-                        <i class="fa-solid fa-user-clock text-xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Manual Total</p>
-                        <p class="text-2xl font-bold text-slate-700" id="header-manual-rev">$0</p>
-                    </div>
-                </div>
-
-                <!-- Center: NET GAIN & ROI -->
-                <div class="flex flex-col md:flex-row gap-6 w-full lg:w-auto items-center justify-center">
-                    <!-- Monthly -->
-                    <div class="flex flex-col items-center justify-center bg-green-50 px-8 py-3 rounded-2xl border border-green-100 shadow-sm relative group cursor-help z-10">
-                        <p class="text-xs font-bold text-green-600 uppercase tracking-widest mb-1 flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-days"></i> Monthly Net Gain
-                        </p>
-                        <div class="text-4xl font-extrabold text-cipher-green tracking-tight" id="header-net-gain">$0</div>
-                        
-                        <!-- Tooltip -->
-                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-center">
-                            Difference in Revenue + Labor Savings
-                            <div class="tooltip-arrow"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Annual -->
-                    <div class="flex flex-col items-center justify-center bg-cipher-navy px-8 py-3 rounded-2xl border border-slate-800 shadow-xl shadow-slate-900/10 transform scale-105 relative group cursor-help z-10">
-                        <p class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 flex items-center gap-2">
-                            <i class="fa-solid fa-arrow-trend-up"></i> Annualized Impact
-                        </p>
-                        <div class="text-4xl font-extrabold text-white tracking-tight" id="header-annual-gain">$0</div>
-
-                        <!-- Tooltip -->
-                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-center">
-                            Projected 12-month value of implementing automation.
-                            <div class="tooltip-arrow"></div>
-                        </div>
-                    </div>
-
-                    <!-- NEW: HIDDEN ROI CARD (Revealed after modal) -->
-                    <div id="scoreboard-roi-card" onclick="openModal()" class="hidden flex-col items-center justify-center bg-white border-2 border-cipher-blue px-8 py-3 rounded-2xl shadow-lg transform scale-105 relative group z-10 cursor-pointer hover:bg-blue-50 transition-colors">
-                        <p class="text-xs font-bold text-cipher-blue uppercase tracking-widest mb-1 flex items-center gap-2">
-                            <i class="fa-solid fa-rocket"></i> Final ROI
-                        </p>
-                        <div class="text-4xl font-extrabold text-cipher-blue tracking-tight" id="scoreboard-roi-value">0.0x</div>
-                    </div>
-                </div>
-
-                <!-- Right Score -->
-                <div class="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-end text-right">
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Cipher Total</p>
-                        <p class="text-2xl font-bold text-cipher-blue" id="header-cipher-rev">$0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-cipher-blue border border-blue-100 shadow-sm">
-                        <i class="fa-solid fa-bolt text-xl"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <!-- LEFT SIDE: MANUAL -->
-            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col relative">
-                <div class="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
-                    <h2 class="font-bold text-lg text-slate-500 uppercase tracking-wide flex items-center gap-2">
-                        <i class="fa-solid fa-user-clock text-slate-400"></i> The Manual Grind
-                        <div class="relative group inline-block ml-1">
-                            <i class="fa-regular fa-circle-question text-slate-400 hover:text-blue-500 cursor-help text-sm"></i>
-                            <div class="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 text-white text-xs font-normal capitalize rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
-                                <strong>Sequential Processing:</strong><br>Nurses must dial patients one-by-one. If you have 300 patients, that's 300 individual tasks.
-                                <div class="absolute top-full left-2 border-8 border-transparent border-t-slate-800"></div>
-                            </div>
-                        </div>
-                    </h2>
-                    <div class="text-xs font-mono bg-slate-200 px-2 py-1 rounded text-slate-600">Sequential Processing</div>
-                </div>
+            <!-- Left Column: Inputs -->
+            <div class="lg:col-span-4 space-y-6">
                 
-                <div class="flex-grow p-6 relative">
-                    <!-- The Queue (Now Grid) -->
-                    <div class="absolute top-6 left-6 bottom-6 w-28 bg-slate-100 rounded-2xl flex flex-wrap content-start justify-center p-2 gap-2 border border-slate-200 shadow-inner overflow-y-auto" id="manual-queue">
-                        <!-- Patients inject here -->
-                    </div>
-                    <div class="absolute top-4 left-36 text-xs font-bold text-slate-400 uppercase">Discharge Queue</div>
-
-                    <!-- The Nurse -->
-                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                        <div id="manual-nurse" class="w-20 h-20 bg-slate-100 border-4 border-slate-300 rounded-full flex items-center justify-center text-3xl text-slate-400 shadow-sm relative z-10 transition-colors">
-                            <i class="fa-solid fa-user-nurse"></i>
-                        </div>
-                        <p class="mt-3 font-bold text-slate-600 text-sm">Staff Nurse</p>
-                        <p id="manual-status" class="text-xs text-slate-400 h-4">Idle</p>
-                    </div>
-
-                    <!-- Connector Line -->
-                    <div class="absolute top-1/2 left-36 right-48 h-0.5 border-t-2 border-dashed border-slate-200 -z-0"></div>
-
-                    <!-- Outcomes -->
-                    <div class="absolute right-6 top-6 bottom-6 w-48 flex flex-col justify-center gap-4">
-                        <div class="bg-red-50 border border-red-100 p-4 rounded-xl text-center shadow-sm relative group">
-                            <div class="text-xs font-bold text-red-400 uppercase mb-1 flex justify-center items-center gap-1">
-                                Lost Revenue
-                                <i class="fa-regular fa-circle-question text-[10px] hover:text-red-600"></i>
-                            </div>
-                            <div id="manual-lost-rev" class="text-2xl font-bold text-red-600">$0</div>
-                            <div class="text-[10px] text-red-400 mt-1">Missed or Late</div>
-
-                            <!-- Tooltip -->
-                            <div class="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
-                                Revenue is lost if patients aren't reached within 48 hours or don't answer the phone.
-                            </div>
-                        </div>
-
-                        <div class="bg-green-50 border border-green-100 p-4 rounded-xl text-center shadow-sm">
-                            <div class="text-xs font-bold text-green-600 uppercase mb-1">Captured Revenue</div>
-                            <div id="manual-captured-rev" class="text-2xl font-bold text-green-700">$0</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-50 border-t border-slate-200 p-4 flex justify-center">
-                    <div class="text-center">
-                        <span class="text-xs text-slate-500 uppercase font-bold flex items-center justify-center gap-1">
-                            Elapsed Time
-                            <div class="relative group inline-block">
-                                <i class="fa-regular fa-circle-question text-slate-400 hover:text-blue-500 cursor-help"></i>
-                                <div class="absolute bottom-full left-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
-                                    Time needed to call everyone. Exceeding 48 hours (2 days) often makes claims unbillable.
-                                </div>
-                            </div>
-                        </span>
-                        <div id="manual-timer" class="text-xl font-mono font-bold text-slate-700">Day 0 - 0:00</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RIGHT SIDE: CIPHERHEALTH -->
-            <div class="bg-white rounded-2xl shadow-xl border-2 border-cipher-blue overflow-hidden flex flex-col relative">
-                <div class="bg-blue-50 border-b border-blue-100 p-4 flex justify-between items-center">
-                    <h2 class="font-bold text-lg text-cipher-blue uppercase tracking-wide flex items-center gap-2">
-                        <i class="fa-solid fa-bolt"></i> The Cipher Engine
-                        <div class="relative group inline-block ml-1">
-                            <i class="fa-regular fa-circle-question text-blue-400 hover:text-cipher-blue cursor-help text-sm"></i>
-                            <div class="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 text-white text-xs font-normal capitalize rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
-                                <strong>Parallel Processing:</strong><br>Automated calls/texts go out to ALL patients simultaneously. 300 patients are contacted as easily as 1.
-                                <div class="absolute top-full left-2 border-8 border-transparent border-t-slate-800"></div>
-                            </div>
-                        </div>
+                <!-- Section 1: Volume & Reimbursement -->
+                <div class="bg-white rounded-xl card-shadow p-6 border border-slate-100">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-hospital-user text-blue-500"></i> Patient Volume
                     </h2>
-                    <div class="text-xs font-mono bg-blue-100 px-2 py-1 rounded text-blue-700">Parallel Processing</div>
-                </div>
-
-                <div class="flex-grow p-6 relative">
-                    <!-- The Queue (Now Grid) -->
-                    <div class="absolute top-6 left-6 bottom-6 w-28 bg-slate-100 rounded-2xl flex flex-wrap content-start justify-center p-2 gap-2 border border-slate-200 shadow-inner overflow-y-auto" id="cipher-queue">
-                        <!-- Patients inject here -->
-                    </div>
                     
-                    <!-- The Platform (Cloud) -->
-                    <div class="absolute top-1/2 left-40 transform -translate-y-1/2 flex flex-col items-center">
-                        <div id="cipher-cloud" class="w-24 h-24 bg-blue-50 border-4 border-cipher-blue rounded-full flex items-center justify-center text-4xl text-cipher-blue shadow-lg relative z-10 transition-all">
-                            <i class="fa-solid fa-cloud-bolt"></i>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Monthly Discharges</label>
+                            <input type="number" id="monthlyDischarges" value="500" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" oninput="calculateROI()">
+                            <p class="text-xs text-slate-500 mt-1">Patients eligible for TCM.</p>
                         </div>
-                        <p class="mt-3 font-bold text-cipher-navy text-sm">Automated Triage</p>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Avg. TCM Reimbursement ($)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400">$</span>
+                                <input type="number" id="tcmReimbursement" value="200" class="w-full pl-7 p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" oninput="calculateROI()">
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Weighted avg of 99495 (~$176) & 99496 (~$237).</p>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Animations Layer -->
-                    <div id="cipher-animations" class="absolute inset-0 pointer-events-none"></div>
+                <!-- Section 2: Labor Assumptions -->
+                <div class="bg-white rounded-xl card-shadow p-6 border border-slate-100">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-user-nurse text-blue-500"></i> Labor Costs
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Staff Hourly Wage ($)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400">$</span>
+                                <input type="number" id="hourlyWage" value="45" class="w-full pl-7 p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" oninput="calculateROI()">
+                            </div>
+                        </div>
 
-                    <!-- Outcomes Column (Now includes Nurse) -->
-                    <div class="absolute right-6 top-6 bottom-6 w-48 flex flex-col justify-between">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Minutes per Manual Attempt</label>
+                            <input type="number" id="minsPerCall" value="10" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" oninput="calculateROI()">
+                            <p class="text-xs text-slate-500 mt-1">Time to dial, leave voicemail, or document.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Avg. Attempts per Patient</label>
+                            <input type="number" id="avgAttempts" value="2.5" step="0.1" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" oninput="calculateROI()">
+                            <p class="text-xs text-slate-500 mt-1">Calls made before reaching patient or giving up.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Reach Rates -->
+                <div class="bg-white rounded-xl card-shadow p-6 border border-slate-100">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-tower-cell text-blue-500"></i> Reach Rates
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-sm font-medium text-slate-700">Current Manual Reach Rate</label>
+                                <span class="text-sm font-bold text-slate-600" id="currentReachDisplay">40%</span>
+                            </div>
+                            <input type="range" id="currentReach" min="0" max="100" value="40" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="calculateROI()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-sm font-medium text-blue-700">Projected Automated Reach</label>
+                                <span class="text-sm font-bold text-blue-600" id="projectedReachDisplay">85%</span>
+                            </div>
+                            <input type="range" id="projectedReach" min="0" max="100" value="85" class="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="calculateROI()">
+                            <p class="text-xs text-slate-500 mt-2">CipherHealth typically achieves 70-90%+ reach rates.</p>
+                        </div>
                         
-                        <!-- 1. Revenue Card -->
-                        <div class="bg-green-100 border border-green-200 p-4 rounded-xl text-center shadow-md transform scale-105 relative group">
-                            <div class="text-xs font-bold text-green-700 uppercase mb-1 flex justify-center items-center gap-1">
-                                Captured Revenue
-                                <i class="fa-regular fa-circle-question text-[10px] hover:text-green-800 cursor-help"></i>
-                            </div>
-                            <div id="cipher-captured-rev" class="text-3xl font-bold text-green-800">$0</div>
-                            <div class="text-[10px] text-green-600 mt-1">Speed = Revenue</div>
-
-                            <!-- Tooltip -->
-                            <div class="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
-                                Higher reach rates and instant contact ensure maximum TCM billing eligibility.
-                            </div>
-                        </div>
-
-                        <!-- 2. The Nurse (Moved Here) -->
-                        <div class="flex flex-col items-center opacity-50 transition-opacity duration-300 py-4 relative group" id="cipher-nurse-container">
-                            <div id="cipher-nurse" class="w-16 h-16 bg-white border-2 border-slate-300 rounded-full flex items-center justify-center text-2xl text-slate-400 shadow-sm transition-all duration-200">
-                                <i class="fa-solid fa-user-nurse"></i>
-                            </div>
-                            <p class="mt-2 font-bold text-slate-500 text-xs text-center">Exception Handler<br>(Your Nurse)</p>
-                            
-                            <!-- Tooltip -->
-                            <div class="absolute bottom-full right-full mr-2 mb-2 w-40 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
-                                The nurse only steps in when a patient reports an issue (alerts).
-                            </div>
-                        </div>
-
-                        <!-- 3. Interventions Card -->
-                        <div class="bg-orange-50 border border-orange-100 p-3 rounded-lg text-center">
-                            <div class="text-xs font-bold text-orange-600 uppercase mb-1">Nurse Interventions</div>
-                            <div id="cipher-alerts" class="text-2xl font-bold text-orange-700">0</div>
+                        <div class="border-t pt-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Conversion to Visit (%)</label>
+                            <input type="number" id="conversionRate" value="80" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" oninput="calculateROI()">
+                            <p class="text-xs text-slate-500 mt-1">% of reached patients who attend the billable face-to-face visit.</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-blue-50 border-t border-blue-100 p-4 flex justify-center">
-                    <div class="text-center">
-                        <span class="text-xs text-blue-500 uppercase font-bold flex items-center justify-center gap-1">
-                            Elapsed Time
-                            <div class="relative group inline-block">
-                                <i class="fa-regular fa-circle-question text-blue-400 hover:text-blue-600 cursor-help"></i>
-                                <div class="absolute bottom-full left-0 mb-2 w-56 p-2 bg-slate-800 text-white text-[10px] font-normal rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-left">
-                                    Near instant. The system can dial/text thousands of patients in minutes.
-                                </div>
-                            </div>
-                        </span>
-                        <div id="cipher-timer" class="text-xl font-mono font-bold text-cipher-blue">Day 0 - 0:00</div>
-                    </div>
-                </div>
             </div>
 
+            <!-- Right Column: Results -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Top Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Labor Savings Card -->
+                    <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-green-500 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-4 opacity-5">
+                            <i class="fa-solid fa-clock fa-4x"></i>
+                        </div>
+                        <h3 class="text-slate-500 text-sm font-medium uppercase tracking-wide">Annual Labor Savings</h3>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <span class="text-3xl font-bold text-slate-900" id="annualLaborSavings">$0</span>
+                            <span class="text-sm text-green-600 font-medium" id="hoursSaved">0 hrs saved</span>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-600">
+                            By automating initial outreach, staff only manage exceptions.
+                        </p>
+                    </div>
+
+                    <!-- Revenue Opportunity Card -->
+                    <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-blue-500 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-4 opacity-5">
+                            <i class="fa-solid fa-chart-line fa-4x"></i>
+                        </div>
+                        <h3 class="text-slate-500 text-sm font-medium uppercase tracking-wide">Annual Net Revenue Increase</h3>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <span class="text-3xl font-bold text-slate-900" id="annualRevIncrease">$0</span>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-600">
+                            Driven by <span id="additionalPatients" class="font-bold">0</span> additional billable patients per year.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Main Chart Area -->
+                <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-6">Financial Impact Analysis</h3>
+                    <div class="w-full h-80">
+                        <canvas id="roiChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown Table -->
+                <div class="bg-white overflow-hidden rounded-xl card-shadow border border-slate-100">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Metric (Monthly)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current (Manual)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">With CipherHealth</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider">Variance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200" id="breakdownTable">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Total ROI Footer -->
+                <div class="bg-blue-900 rounded-xl p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div>
+                        <h2 class="text-2xl font-bold">Total Annual Financial Benefit</h2>
+                        <p class="text-blue-200 mt-1">Labor Savings + Increased Reimbursement Revenue</p>
+                    </div>
+                    <div class="text-4xl font-bold tracking-tight bg-blue-800 px-6 py-3 rounded-lg border border-blue-700" id="totalAnnualImpact">
+                        $0
+                    </div>
+                </div>
+
+            </div>
         </div>
+
     </main>
 
     <script>
-        // --- 1. CONFIGURATION & STATE ---
-        const DOT_RATIO = 10; 
-        
-        let totalPatients = 300; 
-        let reimbursementRate = 200;
-        let nurseHourly = 45;
-        let manualMinsPerPt = 20;
-        
-        let manualReachRate = 0.35;
-        let cipherReachRate = 0.75;
-        
-        // NEW VARS
-        let cipherAlertRate = 0.20;
-        let cipherMinsPerAlert = 5;
-
-        let numDots = 30;
-
-        // Simulation State
-        let isRunning = false;
-        let intervals = [];
-        let completedSims = 0; // Track completion of both
-        let roiCalculated = false; // Flag to track if ROI was calculated in modal
-        
-        // Manual State
-        let mCaptured = 0;
-        let mLost = 0;
-        let mTimeMin = 0;
-        let mLaborCost = 0;
-
-        // Cipher State
-        let cCaptured = 0;
-        let cAlerts = 0;
-        let cTimeMin = 0;
-        let cLaborCost = 0;
-        let annualBenefit = 0; // Store for modal
-
-        // --- 2. SETUP ---
-        function updateConfig() {
-            if(isRunning) return; 
-            
-            const volInput = parseInt(document.getElementById('input_vol').value);
-            const revInput = parseInt(document.getElementById('input_rev').value);
-            const wageInput = parseInt(document.getElementById('input_wage').value);
-            const minsInput = parseInt(document.getElementById('input_mins').value);
-            const reachManualInput = parseInt(document.getElementById('input_reach_manual').value);
-            const reachCipherInput = parseInt(document.getElementById('input_reach_cipher').value);
-            
-            // NEW INPUTS
-            const alertRateInput = parseInt(document.getElementById('input_alert_rate').value);
-            const alertMinsInput = parseInt(document.getElementById('input_alert_mins').value);
-
-            totalPatients = volInput;
-            reimbursementRate = revInput;
-            nurseHourly = wageInput;
-            manualMinsPerPt = minsInput;
-            manualReachRate = reachManualInput / 100;
-            cipherReachRate = reachCipherInput / 100;
-            
-            // SET NEW VARS
-            cipherAlertRate = alertRateInput / 100;
-            cipherMinsPerAlert = alertMinsInput;
-
-            numDots = Math.ceil(totalPatients / DOT_RATIO);
-            if(numDots > 40) numDots = 40; 
-
-            // Update Labels
-            document.getElementById('disp_vol').innerText = volInput;
-            document.getElementById('disp_rev').innerText = '$' + revInput;
-            document.getElementById('disp_wage').innerText = '$' + wageInput;
-            document.getElementById('disp_mins').innerText = minsInput + 'm';
-            document.getElementById('disp_reach_manual').innerText = reachManualInput + '%';
-            document.getElementById('disp_reach_cipher').innerText = reachCipherInput + '%';
-            
-            // NEW LABELS
-            document.getElementById('disp_alert_rate').innerText = alertRateInput + '%';
-            document.getElementById('disp_alert_mins').innerText = alertMinsInput + 'm';
-            
-            // Update Mini Status Bar
-            document.getElementById('mini-vol').innerText = volInput;
-            document.getElementById('mini-wage').innerText = '$' + wageInput;
-
-            initVisuals();
-        }
-
-        function initVisuals() {
-            const mQueue = document.getElementById('manual-queue');
-            const cQueue = document.getElementById('cipher-queue');
-            mQueue.innerHTML = '';
-            cQueue.innerHTML = '';
-            
-            // Reset Stats Displays
-            document.getElementById('manual-captured-rev').innerText = '$0';
-            document.getElementById('manual-lost-rev').innerText = '$0';
-            document.getElementById('cipher-captured-rev').innerText = '$0';
-            document.getElementById('cipher-alerts').innerText = '0';
-            document.getElementById('manual-timer').innerText = 'Day 0 - 0:00';
-            document.getElementById('cipher-timer').innerText = 'Day 0 - 0:00';
-            
-            // Reset Scoreboard
-            mCaptured = 0; cCaptured = 0; mLaborCost = 0; cLaborCost = 0; mTimeMin = 0; cTimeMin = 0;
-            updateScoreboard();
-
-            // Hide ROI card if it was shown
-            document.getElementById('scoreboard-roi-card').classList.add('hidden');
-            document.getElementById('scoreboard-roi-card').classList.remove('flex');
-            roiCalculated = false;
-
-            for(let i=0; i<numDots; i++) {
-                const mDot = document.createElement('div');
-                mDot.className = "w-6 h-6 rounded-full bg-slate-300 border-2 border-white shadow-sm flex-shrink-0 flex items-center justify-center text-[8px] text-slate-500 font-bold transition-all duration-300";
-                mDot.id = `m-dot-${i}`;
-                mQueue.appendChild(mDot);
-
-                const cDot = document.createElement('div');
-                cDot.className = "w-6 h-6 rounded-full bg-slate-300 border-2 border-white shadow-sm flex-shrink-0 flex items-center justify-center text-[8px] text-slate-500 font-bold transition-all duration-300";
-                cDot.id = `c-dot-${i}`;
-                cQueue.appendChild(cDot);
-            }
-        }
-
-        // --- 3. RUNTIME ---
-        function startSimulation() {
-            if(isRunning) return;
-            isRunning = true;
-            completedSims = 0;
-            roiCalculated = false;
-            
-            // UI Toggle & Minification
-            document.getElementById('action-buttons').classList.add('hidden'); // Hide original buttons
-            document.getElementById('config-inputs').classList.add('hidden'); // Hide sliders
-            document.getElementById('config-inputs').classList.add('opacity-0');
-            document.getElementById('sim-status-bar').classList.remove('hidden'); // Show status bar
-            document.getElementById('sim-status-bar').classList.add('flex');
-            
-            // Adjust panel styling for compact look
-            const panel = document.getElementById('config-panel');
-            panel.classList.remove('p-3');
-            panel.classList.add('p-2', 'py-3');
-
-            disableInputs(true);
-
-            // Reset Runtime vars
-            mTimeMin = 0; cTimeMin = 0;
-            mCaptured = 0; cCaptured = 0; mLost = 0;
-            mLaborCost = 0; cLaborCost = 0; cAlerts = 0;
-
-            runManualSim();
-            runCipherSim();
-        }
-
-        function resetSimulation() {
-            location.reload(); 
-        }
-        
-        function disableInputs(disabled) {
-            document.querySelectorAll('input[type="range"]').forEach(el => el.disabled = disabled);
-        }
-
-        function formatMoney(amount) {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
-        }
-
-        function formatTime(minutes) {
-            const days = Math.floor(minutes / (24*60));
-            const remMin = minutes % (24*60);
-            const hrs = Math.floor(remMin / 60);
-            const mins = remMin % 60;
-            return `Day ${days} - ${hrs}:${mins.toString().padStart(2,'0')}`;
-        }
-        
-        // SCOREBOARD UPDATE (NET BENEFIT)
-        function updateScoreboard() {
-            const revDiff = cCaptured - mCaptured;
-            const laborSavings = mLaborCost - cLaborCost;
-            const netBenefit = revDiff + laborSavings;
-            annualBenefit = netBenefit * 12; // Update global var for modal
-            
-            document.getElementById('header-manual-rev').innerText = formatMoney(mCaptured);
-            document.getElementById('header-cipher-rev').innerText = formatMoney(cCaptured);
-            document.getElementById('header-net-gain').innerText = '+' + formatMoney(netBenefit);
-            document.getElementById('header-annual-gain').innerText = '+' + formatMoney(annualBenefit);
-        }
-
-        function checkCompletion() {
-            completedSims++;
-            if(completedSims >= 2) {
-                // Both simulations finished
-                setTimeout(() => {
-                    openModal();
-                }, 1000);
-            }
-        }
-
-        // --- ROI MODAL LOGIC ---
-        function openModal() {
-            const modal = document.getElementById('roi-modal');
-            const benefitDisplay = document.getElementById('modal-annual-benefit');
-            
-            benefitDisplay.innerText = '+' + formatMoney(annualBenefit);
-            
-            modal.classList.remove('modal-hidden');
-            modal.classList.add('modal-active');
-            
-            // Hide result part initially
-            document.getElementById('roi-result').classList.add('hidden');
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('roi-modal');
-            modal.classList.remove('modal-active');
-            modal.classList.add('modal-hidden');
-
-            // IF ROI WAS CALCULATED, SHOW THE CARD ON SCOREBOARD
-            if(roiCalculated) {
-                const roiCard = document.getElementById('scoreboard-roi-card');
-                roiCard.classList.remove('hidden');
-                roiCard.classList.add('flex');
-            }
-        }
-
-        function calculateFinalROI() {
-            const investment = parseInt(document.getElementById('investment-input').value);
-            const resultDiv = document.getElementById('roi-result');
-            const roiDisplay = document.getElementById('final-roi-display');
-            const roiContext = document.getElementById('final-roi-context');
-            
-            // ROI Formula: Benefit / Cost Ratio
-            let roi = 0;
-            if(investment > 0) {
-                roi = annualBenefit / investment;
-            }
-
-            // Update Modal Display
-            roiDisplay.innerText = roi.toFixed(1) + 'x';
-            roiContext.innerText = `For every $1 spent, you get $${roi.toFixed(2)} in value.`;
-            resultDiv.classList.remove('hidden');
-
-            // Update Persistent Scoreboard Card
-            document.getElementById('scoreboard-roi-value').innerText = roi.toFixed(1) + 'x';
-            roiCalculated = true; // Mark as done
-        }
-
-        // --- MANUAL LOGIC ---
-        function runManualSim() {
-            let dotIdx = 0;
-            const mNurse = document.getElementById('manual-nurse');
-            const mStatus = document.getElementById('manual-status');
-            
-            const timer = setInterval(() => {
-                if(dotIdx >= numDots) {
-                    clearInterval(timer);
-                    mNurse.classList.remove('calling', 'border-blue-500', 'text-blue-500');
-                    mStatus.innerText = "Done";
-                    checkCompletion();
-                    return;
-                }
-
-                mNurse.classList.add('calling', 'border-blue-500', 'text-blue-500');
-                mStatus.innerText = "Dialing...";
-
-                // TIME: Add Manual Minutes per Batch (10 pts * X mins)
-                const batchTime = DOT_RATIO * manualMinsPerPt;
-                mTimeMin += batchTime;
-                document.getElementById('manual-timer').innerText = formatTime(mTimeMin);
-                
-                // COST: Calculate Manual Labor
-                // (Minutes / 60) * Hourly Rate
-                const batchCost = (batchTime / 60) * nurseHourly;
-                mLaborCost += batchCost;
-                // document.getElementById('manual-labor-cost').innerText = formatMoney(mLaborCost);
-
-                const isLate = mTimeMin > 2880; // 48 Hours
-                const reachRate = manualReachRate; 
-                
-                // Probabilistic Outcome per DOT (batch)
-                // For manual, we test if this *batch* had good reach.
-                // Since this represents ~10 patients, we simulate an average outcome for the batch.
-                const isReached = Math.random() < reachRate;
-
-                setTimeout(() => {
-                    const dot = document.getElementById(`m-dot-${dotIdx}`);
-                    
-                    if(isLate) {
-                        mLost += (DOT_RATIO * reimbursementRate);
-                        dot.classList.remove('bg-slate-300');
-                        dot.classList.add('bg-red-500'); 
-                    } else if (isReached) {
-                        mCaptured += (DOT_RATIO * reimbursementRate);
-                        dot.classList.remove('bg-slate-300');
-                        dot.classList.add('bg-green-500'); 
-                    } else {
-                        mLost += (DOT_RATIO * reimbursementRate);
-                        dot.classList.remove('bg-slate-300');
-                        dot.classList.add('bg-slate-500'); 
+        // Chart Initialization
+        const ctx = document.getElementById('roiChart').getContext('2d');
+        let roiChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Labor Costs (Lower is Better)', 'TCM Revenue (Higher is Better)'],
+                datasets: [
+                    {
+                        label: 'Current Manual Process',
+                        data: [0, 0],
+                        backgroundColor: '#94a3b8',
+                        borderRadius: 6,
+                    },
+                    {
+                        label: 'With CipherHealth',
+                        data: [0, 0],
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6,
                     }
-
-                    document.getElementById('manual-captured-rev').innerText = formatMoney(mCaptured);
-                    document.getElementById('manual-lost-rev').innerText = formatMoney(mLost);
-                    
-                    updateScoreboard(); 
-                    
-                    mNurse.classList.remove('calling', 'border-blue-500', 'text-blue-500');
-                    dotIdx++;
-
-                }, 300);
-
-            }, 500); 
-
-            intervals.push(timer);
-        }
-
-        // --- CIPHER LOGIC ---
-        function runCipherSim() {
-            const cCloud = document.getElementById('cipher-cloud');
-            const cNurse = document.getElementById('cipher-nurse');
-            const cNurseCont = document.getElementById('cipher-nurse-container');
-            
-            setTimeout(() => {
-                cCloud.classList.add('broadcasting', 'scale-110');
-                
-                let dotIdx = 0;
-                
-                const timer = setInterval(() => {
-                    if(dotIdx >= numDots) {
-                        clearInterval(timer);
-                        cCloud.classList.remove('broadcasting', 'scale-110');
-                        checkCompletion();
-                        return;
-                    }
-
-                    // TIME: Cipher is instant, so only minimal time passes visually
-                    cTimeMin += 1; 
-                    document.getElementById('cipher-timer').innerText = formatTime(cTimeMin);
-
-                    const reachRate = cipherReachRate;
-                    
-                    // Probabilistic Outcome per DOT
-                    const isReached = Math.random() < reachRate;
-                    
-                    if (isReached) {
-                        // Reached! Revenue Captured.
-                        cCaptured += (DOT_RATIO * reimbursementRate);
-                        
-                        // Check for Nurse Alert (Variable Rate!)
-                        const isAlert = Math.random() < cipherAlertRate; 
-                        
-                        const dot = document.getElementById(`c-dot-${dotIdx}`);
-                        
-                        if(isAlert) {
-                            cAlerts++;
-                            // Add labor cost for alert (Variable Time!)
-                            const alertCost = (cipherMinsPerAlert / 60) * nurseHourly;
-                            cLaborCost += alertCost;
-                            // document.getElementById('cipher-labor-cost').innerText = formatMoney(cLaborCost);
-
-                            dot.classList.remove('bg-slate-300');
-                            dot.classList.add('bg-orange-500', 'text-white');
-                            
-                            cNurseCont.classList.remove('opacity-50');
-                            cNurse.classList.add('border-orange-500', 'text-orange-500', 'scale-110');
-                            setTimeout(() => {
-                                cNurseCont.classList.add('opacity-50');
-                                cNurse.classList.remove('border-orange-500', 'text-orange-500', 'scale-110');
-                            }, 100);
-                        } else {
-                            dot.classList.remove('bg-slate-300');
-                            dot.classList.add('bg-green-500');
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
                         }
-                    } else {
-                        // Not Reached
-                        const dot = document.getElementById(`c-dot-${dotIdx}`);
-                        dot.classList.remove('bg-slate-300');
-                        dot.classList.add('bg-slate-400', 'opacity-50');
                     }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString(); // Compact currency
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-                    document.getElementById('cipher-captured-rev').innerText = formatMoney(cCaptured);
-                    document.getElementById('cipher-alerts').innerText = cAlerts;
-                    
-                    updateScoreboard(); 
+        function calculateROI() {
+            // 1. Get Inputs
+            const volume = parseFloat(document.getElementById('monthlyDischarges').value) || 0;
+            const reimbursement = parseFloat(document.getElementById('tcmReimbursement').value) || 0;
+            const wage = parseFloat(document.getElementById('hourlyWage').value) || 0;
+            const minsPerCall = parseFloat(document.getElementById('minsPerCall').value) || 0;
+            const attempts = parseFloat(document.getElementById('avgAttempts').value) || 0;
+            
+            const currentReachPct = parseFloat(document.getElementById('currentReach').value) / 100;
+            const projectedReachPct = parseFloat(document.getElementById('projectedReach').value) / 100;
+            const conversionPct = parseFloat(document.getElementById('conversionRate').value) / 100;
 
-                    dotIdx++;
+            // Update range displays
+            document.getElementById('currentReachDisplay').innerText = Math.round(currentReachPct * 100) + '%';
+            document.getElementById('projectedReachDisplay').innerText = Math.round(projectedReachPct * 100) + '%';
 
-                }, 500); 
+            // 2. Labor Calculations
+            // Manual: Every patient gets manual attempts
+            const manualHoursMonthly = (volume * attempts * minsPerCall) / 60;
+            const manualLaborCostMonthly = manualHoursMonthly * wage;
 
-                intervals.push(timer);
+            // Automated: CipherHealth calls everyone. Staff only call failures/exceptions.
+            // Assumption: 20% of patients need manual intervention (clinical questions, wrong numbers, etc.)
+            const exceptionRate = 0.20; 
+            const automatedHoursMonthly = (volume * exceptionRate * minsPerCall) / 60; 
+            const automatedLaborCostMonthly = automatedHoursMonthly * wage;
 
-            }, 500);
+            const laborSavingsMonthly = manualLaborCostMonthly - automatedLaborCostMonthly;
+
+            // 3. Revenue Calculations
+            // We only bill if we Reach AND they Convert (visit)
+            const patientsBilledManual = volume * currentReachPct * conversionPct;
+            const revenueManual = patientsBilledManual * reimbursement;
+
+            const patientsBilledAuto = volume * projectedReachPct * conversionPct;
+            const revenueAuto = patientsBilledAuto * reimbursement;
+
+            const revenueIncreaseMonthly = revenueAuto - revenueManual;
+
+            // 4. Annualizing
+            const annualLaborSavings = laborSavingsMonthly * 12;
+            const annualRevIncrease = revenueIncreaseMonthly * 12;
+            const totalBenefit = annualLaborSavings + annualRevIncrease;
+            const annualHoursSaved = (manualHoursMonthly - automatedHoursMonthly) * 12;
+            const additionalPatients = (patientsBilledAuto - patientsBilledManual) * 12;
+
+            // 5. Update DOM
+            const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+            
+            document.getElementById('annualLaborSavings').innerText = currencyFmt.format(annualLaborSavings);
+            document.getElementById('hoursSaved').innerText = Math.round(annualHoursSaved).toLocaleString() + ' hrs saved';
+            
+            document.getElementById('annualRevIncrease').innerText = currencyFmt.format(annualRevIncrease);
+            document.getElementById('additionalPatients').innerText = Math.round(additionalPatients).toLocaleString();
+            
+            document.getElementById('totalAnnualImpact').innerText = currencyFmt.format(totalBenefit);
+
+            // Update Chart
+            roiChart.data.datasets[0].data = [manualLaborCostMonthly * 12, revenueManual * 12]; // Manual
+            roiChart.data.datasets[1].data = [automatedLaborCostMonthly * 12, revenueAuto * 12]; // Automated
+            roiChart.update();
+
+            // Update Table
+            const tableHTML = `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">Reach Rate</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${Math.round(currentReachPct*100)}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">${Math.round(projectedReachPct*100)}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">+${Math.round((projectedReachPct - currentReachPct)*100)}%</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">Successful Contacts</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${Math.round(volume * currentReachPct)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">${Math.round(volume * projectedReachPct)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">+${Math.round((volume * projectedReachPct) - (volume * currentReachPct))}</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">Staff Hours Used</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${Math.round(manualHoursMonthly)} hrs</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">${Math.round(automatedHoursMonthly)} hrs</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">-${Math.round(manualHoursMonthly - automatedHoursMonthly)} hrs</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">Monthly Revenue</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${currencyFmt.format(revenueManual)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">${currencyFmt.format(revenueAuto)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">+${currencyFmt.format(revenueIncreaseMonthly)}</td>
+                </tr>
+            `;
+            document.getElementById('breakdownTable').innerHTML = tableHTML;
         }
 
-        window.onload = function() {
-            updateConfig(); 
-        }
-
+        // Initialize on load
+        window.onload = calculateROI;
     </script>
 </body>
 </html>
